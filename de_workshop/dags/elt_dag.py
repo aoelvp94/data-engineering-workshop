@@ -10,6 +10,7 @@ from airflow.operators.python import PythonOperator
 from de_workshop.config import DBT_PROJECT_DIR
 from de_workshop.dags.task_groups.dbt_taskgroup import dbt_task_group
 from de_workshop.extract import get_data_from_gnews
+from de_workshop.helpers import create_minio_bucket
 
 default_args = {
     "owner": "mutt",
@@ -48,9 +49,28 @@ with DAG(
         op_args=["Messi"],
     )
 
+    create_silver_bucket = PythonOperator(
+        task_id="create_silver_bucket",
+        python_callable=create_minio_bucket,
+        op_args=["minioadmin",
+        "minioadmin",
+        "host.docker.internal:9000",
+        "de-data-silver"],
+    )
+
     bronze_to_silver = dbt_task_group(model_name="silver")
 
+    create_gold_bucket = PythonOperator(
+        task_id="create_gold_bucket",
+        python_callable=create_minio_bucket,
+        op_args=["minioadmin",
+        "minioadmin",
+        "host.docker.internal:9000",
+        "de-data-gold"],
+    )
+
     silver_to_gold = dbt_task_group(model_name="gold")
+
 
     post_dbt_task = EmptyOperator(task_id="post_dbt_task")
 
@@ -58,7 +78,9 @@ with DAG(
         pre_dbt_task
         >> ingest_data
         >> create_duckdb_table()
+        >> create_silver_bucket
         >> bronze_to_silver
+        >> create_gold_bucket
         >> silver_to_gold
         >> post_dbt_task
     )

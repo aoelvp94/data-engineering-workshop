@@ -245,6 +245,34 @@ class GNews_wo_import(GNews):
             return []
 
 
+def create_minio_bucket(
+    access_key, secret_key, endpoint, bucket_name
+):
+    """
+    Uploads a file to a Minio bucket from a local system.
+
+    Args:
+        access_key (str): Minio access key.
+        secret_key (str): Minio secret key.
+        server_url (str): Minio server link
+        bucket_name (str): Name of th bucket..
+
+    """
+    try:
+        # Initialize Minio client
+        minio_client = Minio(
+            endpoint, access_key=access_key, secret_key=secret_key, secure=False
+        )  # Set to True if using HTTPS
+
+        # Create the bucket if it doesn't exist
+        if not minio_client.bucket_exists(bucket_name):
+            minio_client.make_bucket(bucket_name)
+            logging.info(f"Bucket '{bucket_name}' created successfully.")
+
+    except Exception as err:
+        logging.info(f"other error occurred: {err}")
+
+
 def upload_to_minio(
     access_key, secret_key, endpoint, bucket_name, df_to_upload, object_name
 ):
@@ -261,15 +289,7 @@ def upload_to_minio(
 
     """
     try:
-        # Initialize Minio client
-        minio_client = Minio(
-            endpoint, access_key=access_key, secret_key=secret_key, secure=False
-        )  # Set to True if using HTTPS
-
-        # Create the bucket if it doesn't exist
-        if not minio_client.bucket_exists(bucket_name):
-            minio_client.make_bucket(bucket_name)
-            print(f"Bucket '{bucket_name}' created successfully.")
+        create_minio_bucket(access_key, secret_key, endpoint, bucket_name)
 
         # Upload file to Minio
         csv_bytes = df_to_upload.to_csv().encode('utf-8')
@@ -283,8 +303,5 @@ def upload_to_minio(
             content_type='application/csv',
         )
 
-    except ResponseError as err:
-        print(f"Minio error occurred: {err}")
-
     except Exception as err:
-        print(f"other error occurred: {err}")
+        logging.info(f"other error occurred: {err}")
