@@ -165,6 +165,9 @@ services:
         source: ../superset
         target: /superset
       - type: bind
+        source: ../dbt_project/data.duckdb
+        target: /superset/data.duckdb
+      - type: bind
         source: ../superset/superset_config.py
         target: /etc/superset/superset_config.py
     networks:

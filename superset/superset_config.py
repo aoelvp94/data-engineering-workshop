@@ -2,7 +2,7 @@
 import os
 
 REDIS_PORT = os.getenv("SUPERSET_REDIS_PORT")
-REDIS_HOST = "de-redis"
+REDIS_HOST = "host.docker.internal"
 
 CACHE_CONFIG = {
     "CACHE_TYPE": "redis",
