@@ -1,0 +1,55 @@
+[tool.poetry]
+name = "de_workshop"
+version = "0.1.0"
+description = ""
+authors = ["Mutt Data"]
+packages = [{include = "de_workshop"}]
+
+[tool.poetry.dependencies]
+python = ">=3.10,<3.12"
+dbt-duckdb = "^1.7.1"
+duckdb = "^0.10.0"
+airflow-provider-duckdb = "^0.2.0"
+gnews = "^0.3.6"
+apache-airflow = "2.8.1"
+psycopg2-binary = "^2.9.9"
+Flask-Session = "0.5.0"
+pandas = "^2.2.0"
+newspaper3k = "0.2.8"
+feedparser = "6.0.8"
+minio = "^7.2.4"
+python-decouple = "^3.6"
+
+[tool.poetry.group.dev.dependencies]
+sqlfluff = "^2.3.5"
+sqlfluff-templater-dbt = "^2.3.5"
+pdbpp = "^0.10.2"
+pylint = "^2.6.0"
+pre-commit = "^2.7.1"
+black = "22.3.0"
+click="8.0.2"
+flake8 = "^3.8.4"
+isort = "^5.6.4"
+pre-commit-hooks = "^3.3.0"
+pytest = "^6.1.1"
+shellcheck-py = "^0.7.1.1"
+
+[tool.isort]
+multi_line_output = 3
+line_length = 88
+include_trailing_comma = true
+
+[tool.sqlfluff.core]
+templater = "jinja"
+dialect = "ansi"
+max_line_length = 120
+
+[tool.sqlfluff.indentation]
+tab_space_size = 4
+
+[tool.sqlfluff.templater.jinja]
+apply_dbt_builtins = true
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.masonry.api"

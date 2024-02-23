@@ -1,0 +1,136 @@
+version: '3'
+
+x-common-variables: &common-variables
+  AIRFLOW__CORE__DAGS_FOLDER: ${AIRFLOW_DAG_FOLDER}
+  AIRFLOW__CORE__EXECUTOR: LocalExecutor
+  AIRFLOW__CORE__LOAD_EXAMPLES: "0"
+  AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: "${POSTGRES_DIALECT}://${POSTGRES_USER}:${POSTGRES_PASSWORD}@${POSTGRES_HOST}:5432/${AIRFLOW_POSTGRES_DB}"
+  AIRFLOW__LOGGING__BASE_LOG_FOLDER: ${AIRFLOW_LOG_FOLDER}
+  AIRFLOW_CREATE_USER_CONN: ${AIRFLOW_CREATE_USER_CONN}
+  AIRFLOW_EMAIL: ${AIRFLOW_EMAIL}
+  AIRFLOW_FIRST: ${AIRFLOW_FIRST}
+  AIRFLOW_LAST: ${AIRFLOW_LAST}
+  AIRFLOW_PASSWORD: ${AIRFLOW_PASSWORD}
+  AIRFLOW_PORT: ${AIRFLOW_PORT}
+  AIRFLOW_ROLE: ${AIRFLOW_ROLE}
+  AIRFLOW_USER: ${AIRFLOW_USER}
+  MINIO_STAGING_DIR: ${MINIO_STAGING_DIR}
+  DBT_SOURCE: ${DBT_SOURCE}
+  MINIO_GOLD_DATA_DIR: ${MINIO_GOLD_DATA_DIR}
+  MINIO_SILVER_DATA_DIR: ${MINIO_SILVER_DATA_DIR}
+  TZ: UTC
+
+services:
+
+  base:
+    container_name: de-base-container
+    image: de-base
+    build: 
+        context: ../
+        dockerfile: docker/Dockerfile
+    environment: 
+      MINIO_STAGING_DIR: ${MINIO_STAGING_DIR}
+      MINIO_GOLD_DATA_DIR: ${MINIO_GOLD_DATA_DIR}
+      MINIO_SILVER_DATA_DIR: ${MINIO_SILVER_DATA_DIR}
+      DBT_SOURCE: ${DBT_SOURCE}
+    tty: true
+    platform: linux/x86_64
+    volumes:
+        - ../:/data-engineering-workshop/
+        - type: bind
+          source: ../.env
+          target: /data-engineering-workshop/.env
+    working_dir: /data-engineering-workshop/
+    networks:
+        - de-network
+
+  postgres-db:
+    image: postgres:13-alpine
+    container_name: de-postgres-db
+    environment:
+      <<: *common-variables
+      POSTGRES_INITDB_ARGS: "--encoding=UTF-8"
+      POSTGRES_MULTIPLE_DATABASES: "${POSTGRES_DB},${AIRFLOW_POSTGRES_DB}"
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      TZ: UTC
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./docker-entrypoint-initdb.d:/docker-entrypoint-initdb.d
+    expose:
+      - 5432
+    ports:
+      - ${POSTGRES_PORT}:5432
+    networks:
+      - de-network
+    restart: always
+
+
+  # AIRFLOW WEBSERVER
+  airflow-webserver:
+    container_name: de-airflow-ws
+    image: de-base
+    restart: always
+    environment:
+      <<: *common-variables
+    ports:
+      - ${AIRFLOW_PORT}:${AIRFLOW_PORT}
+    entrypoint: bash /data-engineering-workshop/docker/entrypoints/start_airflow_webserver.sh
+    healthcheck:
+      test: ["CMD-SHELL", "[ -f /usr/local/airflow/airflow-webserver.pid ]"]
+      interval: 60s
+      timeout: 30s
+      retries: 3
+    volumes:
+      - ../:/data-engineering-workshop/
+      - ../de_workshop/dags/logs/:${AIRFLOW_LOG_FOLDER}
+      - ../de_workshop/dags/:${AIRFLOW_DAG_FOLDER}
+      - type: bind
+        source: ../.env
+        target: /data-engineering-workshop/.env
+    working_dir: /data-engineering-workshop/
+    networks:
+      - de-network
+
+  # AIRFLOW SCHEDULER
+  airflow-scheduler:
+    container_name: de-airflow-scheduler
+    image: de-base
+    restart: always
+    environment:
+        <<: *common-variables
+    command: poetry run airflow scheduler
+    volumes:
+      - ../:/data-engineering-workshop/
+      - ../de_workshop/dags/logs/:${AIRFLOW_LOG_FOLDER}
+      - ../de_workshop/dags/:${AIRFLOW_DAG_FOLDER}
+      - type: bind
+        source: ../.env
+        target: /data-engineering-workshop/.env
+    working_dir: /data-engineering-workshop/
+    networks:
+      - de-network
+
+  minio:
+    container_name: de-minio
+    image: minio/minio:latest
+    ports:
+      - '9000:9000'
+      - '9090:9090'
+    volumes:
+      - './minio_data:/data'
+    env_file:
+      - .env
+    command: server --console-address ":9090" /data
+
+# VOLUMES
+volumes:
+  postgres-data:
+
+# NETWORKS
+networks:
+  de-network:
+    ipam:
+      driver: default
+      config:
+          - subnet: ${IP_SUBNET}/16

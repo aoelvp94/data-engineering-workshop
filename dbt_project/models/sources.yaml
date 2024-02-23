@@ -1,0 +1,8 @@
+version: 2
+
+sources:
+  - name: de_bronze
+    database: data
+    schema: main
+    tables:
+      - name: raw_data

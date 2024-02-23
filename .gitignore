@@ -1,0 +1,22 @@
+__pycache__/
+*.py[cod]
+
+# Ignorable notebooks
+*Copy*.ipynb
+Untitled*.ipynb
+tmp_*.ipynb
+.ipynb_checkpoints
+
+
+logs/
+
+.env
+
+*.pem
+
+minio_data/
+.user.yml
+
+.DS_Store
+
+.venv/
