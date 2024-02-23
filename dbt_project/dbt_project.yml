@@ -36,9 +36,9 @@ models:
       +pre-hook:
         - install 'httpfs'
         - load 'httpfs'
-      +materialized: external
+      +materialized: table
     gold:
       +pre-hook:
         - install 'httpfs'
         - load 'httpfs'
-      +materialized: external
+      +materialized: table

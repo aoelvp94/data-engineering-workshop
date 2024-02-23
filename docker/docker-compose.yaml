@@ -50,7 +50,7 @@ services:
     environment:
       <<: *common-variables
       POSTGRES_INITDB_ARGS: "--encoding=UTF-8"
-      POSTGRES_MULTIPLE_DATABASES: "${POSTGRES_DB},${AIRFLOW_POSTGRES_DB}"
+      POSTGRES_MULTIPLE_DATABASES: "${POSTGRES_DB},${AIRFLOW_POSTGRES_DB},${SUPERSET_POSTGRES_DB}"
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       TZ: UTC
@@ -122,6 +122,53 @@ services:
     env_file:
       - .env
     command: server --console-address ":9090" /data
+
+  # REDIS
+  redis:
+    container_name: de-redis
+    image: redis
+    restart: always
+
+  # SUPERSET
+  superset:
+    container_name: de-superset
+    image: amancevice/superset
+    entrypoint: bash /docker/entrypoints/start_superset.sh
+    restart: always
+    depends_on:
+      - postgres-db
+      - redis
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_HOST: ${POSTGRES_HOST}
+      POSTGRES_PORT: ${POSTGRES_PORT}
+      POSTGRES_DB: ${POSTGRES_DB}
+      FLASK_APP: ${FLASK_APP}
+      SUPERSET_CREATE_USER: ${SUPERSET_CREATE_USER}
+      SUPERSET_EMAIL: ${SUPERSET_EMAIL}
+      SUPERSET_FIRSTNAME: ${SUPERSET_FIRSTNAME}
+      SUPERSET_LASTNAME: ${SUPERSET_LASTNAME}
+      SUPERSET_USER: ${SUPERSET_USER}
+      SUPERSET_PASSWORD: ${SUPERSET_PASSWORD}
+      SUPERSET_PORT: ${SUPERSET_PORT}
+      SUPERSET_POSTGRES_DB: ${SUPERSET_POSTGRES_DB}
+      SUPERSET_REDIS_PORT: ${SUPERSET_REDIS_PORT}
+      SUPERSET_SECRET_KEY: ${SUPERSET_SECRET_KEY}
+    ports:
+      - ${SUPERSET_PORT}:${SUPERSET_PORT}
+    volumes:
+      - type: bind
+        source: ./
+        target: /docker
+      - type: bind
+        source: ../superset
+        target: /superset
+      - type: bind
+        source: ../superset/superset_config.py
+        target: /etc/superset/superset_config.py
+    networks:
+      - de-network
 
 # VOLUMES
 volumes:
